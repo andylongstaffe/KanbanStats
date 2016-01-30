@@ -1,25 +1,39 @@
 package com.hollywood.kanban.stats;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hollywood.kanban.trello.binding.TrelloCard;
+import com.hollywood.kanban.trello.binding.TrelloList;
 import com.jayway.jsonpath.JsonPath;
 
-public class TrelloBoard implements KanbanStatsSource {
-	
+/**
+ * 
+ * Useful resource: https://developers.trello.com/sandbox
+ * 
+ * @author andylongstaffe
+ *
+ */
+public class TrelloBoard {
+
 	private static final Logger LOG = LoggerFactory.getLogger(TrelloBoard.class);
-	
-    public static final String API_URL = "https://api.trello.com/1";
-    public static final String API_KEY_TOKEN_PARAM = "key={applicationKey}&token={userToken}";
-	
+
+	public static final String API_URL = "https://api.trello.com/1";
+	public static final String API_KEY_TOKEN_PARAM = "key={applicationKey}&token={userToken}";
+
 	private String boardName;
 	private String applicationKey;
 	private String applicationToken;
-	private RestTemplate restTemplate;	
+	private RestTemplate restTemplate;
+	private String boardId = null;
 
 	public TrelloBoard(String boardName, String applicationKey, String applicationToken, RestTemplate restTemplate) {
 		this.boardName = boardName;
@@ -27,38 +41,58 @@ public class TrelloBoard implements KanbanStatsSource {
 		this.applicationToken = applicationToken;
 		this.restTemplate = restTemplate;
 	}
-	
-	private void retrieveStats() {
-		String boardId = getBoardId();
-		LOG.debug("Board id=" + boardId);
-		HashMap<String, Integer> columnCounts = getColumnCounts(boardId);
+
+	public List<TrelloCard> getCards() {
+		String response = trelloGetRequest("board/" + getBoardId() + "/cards");
+		ObjectMapper mapper = new ObjectMapper();
+		List<TrelloCard> cards = null;
+		try {
+			cards = mapper.readValue(response, new TypeReference<List<TrelloCard>>() {
+			});
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return cards;
 	}
 
-	private HashMap<String, Integer> getColumnCounts(String boardId) {
-		// TODO Auto-generated method stub
-		return null;
+	public List<TrelloList> getLists() {
+		String response = trelloGetRequest("board/" + getBoardId() + "/lists");
+		ObjectMapper mapper = new ObjectMapper();
+		List<TrelloList> lists = null;
+		try {
+			lists = mapper.readValue(response, new TypeReference<List<TrelloList>>() {
+			});
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return lists;
 	}
-	
+
 	private String getURL(String restPath) {
 		return String.format(API_URL + "/" + restPath + "?" + API_KEY_TOKEN_PARAM);
 	}
 
-	private String getBoardId() {
-		String boardId = null;
-		String url = getURL("member/me/boards");
-		String response = restTemplate.getForObject(url, String.class, applicationKey, applicationToken);
-		System.out.println(response);
-		List<String> result = JsonPath.read(response, "$..*[?(@.name=='" + boardName + "')].id");
-		if ( result.size() == 1) {
-			boardId = result.get(0);
+	public String getBoardId() {
+		if (boardId == null) {
+			String response = trelloGetRequest("member/me/boards");
+			List<String> result = JsonPath.read(response, "$..*[?(@.name=='" + boardName + "')].id");
+			if (result.size() == 1) {
+				boardId = result.get(0);
+			}
+			LOG.debug("Board id for " + boardName + " is " + boardId);
 		}
 		return boardId;
 	}
 
-	@Override
-	public HashMap<String,Integer> getStats() {
-		retrieveStats();
-		return null;
+	private String trelloGetRequest(String path) {
+		String url = getURL(path);
+		String response = restTemplate.getForObject(url, String.class, applicationKey, applicationToken);
+		LOG.debug("Response from " + path + ": " + response);
+		return response;
+	}
+
+	public String getBoardName() {
+		return boardName;
 	}
 
 }

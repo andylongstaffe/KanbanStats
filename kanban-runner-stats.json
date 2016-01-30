@@ -1,0 +1,15 @@
+{
+  "columnCounts" : {
+    "Stories to be prioritised" : 3,
+    "Done" : 8,
+    "Test in progress [3] (WIP=3)" : 2,
+    "DEV in progress [5] (WIP=5)" : 4,
+    "Analysis in progress [4] (WIP=4)" : 2,
+    "Stories" : 7,
+    "Ready to be deployed" : 12,
+    "Analysis Done" : 3,
+    "Test Done" : 3,
+    "Version 1.0.2-x-240" : 29
+  },
+  "collectionDate" : "2016-01-30 15:19"
+}
